@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "608973939871",
+    "project_id": "truckalert-febf6",
+    "storage_bucket": "truckalert-febf6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:608973939871:android:c386f6e8180e2273a72eaa",
+        "android_client_info": {
+          "package_name": "com.example.truckalert"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWChON4RBZskEWR3-xDFo5KCzEN-6uHbs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

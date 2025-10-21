@@ -41,11 +41,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    implementation ("com.google.firebase:firebase-database:20.3.0")
-    implementation ("com.google.firebase:firebase-auth:22.3.0")
-    implementation("com.google.firebase:firebase-auth")
-    implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
-    implementation("com.google.firebase:firebase-analytics")
     implementation ("org.tensorflow:tensorflow-lite:2.12.0")
     implementation ("org.tensorflow:tensorflow-lite-support:0.4.3")
     implementation ("org.tensorflow:tensorflow-lite-task-vision:0.4.3")
@@ -56,4 +51,11 @@ dependencies {
     implementation ("androidx.camera:camera-extensions:1.2.3")
     implementation ("com.google.mlkit:object-detection:17.0.0")
     implementation ("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
+    implementation ("org.tensorflow:tensorflow-lite-gpu:2.12.0")
+    implementation ("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation ("com.android.volley:volley:1.2.1")
+    implementation ("org.tensorflow:tensorflow-lite:2.12.0")
+    implementation ("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation ("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
+
 }

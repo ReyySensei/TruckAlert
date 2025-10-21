@@ -1,157 +1,290 @@
 package com.example.truckalert;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
+import com.android.volley.Request;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.android.volley.DefaultRetryPolicy;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.view.TextureView;
 import android.widget.Button;
+import android.widget.TextView;
+import java.io.IOException;
+import android.media.MediaPlayer;
 
-import androidx.annotation.NonNull;
+
+import android.graphics.RectF;
+
+
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.Preview;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.PreviewView;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
-import com.google.common.util.concurrent.ListenableFuture;
 
 import org.tensorflow.lite.task.vision.detector.Detection;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class CameraSensorsActivity extends AppCompatActivity {
 
-    private static final String TAG = "CameraSensorsActivity";
-    private static final int REQUEST_CODE_PERMISSIONS = 10;
-    private static final String[] REQUIRED_PERMISSIONS = new String[]{Manifest.permission.CAMERA};
-
-    private PreviewView cameraView;
-    private OverlayView overlayView;
-    private ExecutorService cameraExecutor;
+    public TextureView frontCam, backCam;
+    public OverlayView overlayView;
+    public OverlayView frontOverlay, backOverlay;
+    public TextView leftSensor, backSensor, rightSensor;
 
     private ObjectDetectorHelper objectDetectorHelper;
+
+    private HandlerThread frontInferenceThread, backInferenceThread;
+    private Handler frontHandler, backHandler;
+
+    private MJPEGDecoder frontStream, backStream;
+
+    private final Object detectionLock = new Object();
+    private MediaPlayer mediaPlayer;
+    private boolean isAlertPlaying = false;
+
+    private final String[] relevantLabels = { "person", "motorcycle", "bicycle", "cat", "dog"};
+
+    // Sensor URLs
+    private final String LEFT_SENSOR_URL = "http://192.168.4.103/left";
+    private final String BACK_SENSOR_URL = "http://192.168.4.104/back";
+    private final String RIGHT_SENSOR_URL = "http://192.168.4.105/right";
+
+
+    private Handler sensorHandler = new Handler();
+
+    private boolean isRelevant(String label) {
+        for (String rl : relevantLabels)
+            if (label.equalsIgnoreCase(rl)) return true;
+        return false;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera_sensors);
 
-        cameraView = findViewById(R.id.cameraView);
-        overlayView = findViewById(R.id.overlayView);
+        mediaPlayer = MediaPlayer.create(this, R.raw.beep);
 
-        // Initialize detector helper
-        objectDetectorHelper = new ObjectDetectorHelper(this);
-
-        // Handle back button
         Button backButton = findViewById(R.id.backButton);
         backButton.setOnClickListener(v -> finish());
 
-        // Start camera if permission is granted
-        if (allPermissionsGranted()) {
-            startCamera();
-        } else {
-            ActivityCompat.requestPermissions(
-                    this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
-            );
+        frontCam = findViewById(R.id.frontCam);
+        backCam = findViewById(R.id.backCam);
+        overlayView = findViewById(R.id.overlayView);
+        frontOverlay = findViewById(R.id.frontOverlay);
+        backOverlay = findViewById(R.id.backOverlay);
+
+        leftSensor = findViewById(R.id.leftSensor);
+        backSensor = findViewById(R.id.backSensor);
+        rightSensor = findViewById(R.id.rightSensor);
+
+
+        try {
+            objectDetectorHelper = new ObjectDetectorHelper(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Optionally show a message or finish the activity
+            finish();
         }
 
-        cameraExecutor = Executors.newSingleThreadExecutor();
+
+        // Threads for inference
+        frontInferenceThread = new HandlerThread("FrontInferenceThread");
+        frontInferenceThread.start();
+        frontHandler = new Handler(frontInferenceThread.getLooper());
+
+        backInferenceThread = new HandlerThread("BackInferenceThread");
+        backInferenceThread.start();
+        backHandler = new Handler(backInferenceThread.getLooper());
+
+        // Start camera streams (unchanged)
+        startMJPEGStreams();
+
+        // Start sensors
+        startSensorPolling();
     }
 
-    private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
-                ProcessCameraProvider.getInstance(this);
+    // Camera stream code unchanged
+    private void startMJPEGStreams() {
+        String frontURL = "http://192.168.4.101:81/stream";
+        String backURL = "http://192.168.4.102:81/stream";
 
-        cameraProviderFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+        frontStream = new MJPEGDecoder(frontURL, frontCam, true, this);
+        backStream = new MJPEGDecoder(backURL, backCam, false, this);
 
-                Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(cameraView.getSurfaceProvider());
+        frontStream.start();
+        backStream.start();
+    }
 
-                ImageAnalysis imageAnalysis =
-                        new ImageAnalysis.Builder()
-                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                .build();
+    /*** ---- OBJECT DETECTION ---- ***/
+    public void runDetection(Bitmap bitmap, boolean isFrontCam) {
+        if (bitmap == null) return;
 
-                imageAnalysis.setAnalyzer(cameraExecutor, imageProxy -> {
-                    Bitmap bitmap = ImageUtil.imageProxyToBitmap(imageProxy);
-                    if (bitmap != null) {
-                        runDetection(bitmap);
+        Handler handler = isFrontCam ? frontHandler : backHandler;
+
+        handler.post(() -> {
+            synchronized (detectionLock) {
+                // Detect objects using the new helper
+                List<OverlayView.Recognition> results = objectDetectorHelper.detectObjects(bitmap);
+
+                // No need to filter by label, because helper already limits to 5 objects
+                List<OverlayView.Recognition> filtered = results != null ? results : new ArrayList<>();
+
+                // Update overlay
+                runOnUiThread(() -> {
+                    OverlayView overlay = isFrontCam ? frontOverlay : backOverlay;
+                    TextureView camView = isFrontCam ? frontCam : backCam;
+                    if (overlay != null && camView != null) {
+                        overlay.setDetections(
+                                filtered,
+                                bitmap.getWidth(), bitmap.getHeight(),
+                                camView.getWidth(), camView.getHeight(),
+                                isFrontCam
+                        );
                     }
-                    imageProxy.close();
                 });
-
-                CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
-
-                cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(
-                        this, cameraSelector, preview, imageAnalysis
-                );
-
-            } catch (Exception e) {
-                Log.e(TAG, "Camera start failed", e);
-            }
-        }, ContextCompat.getMainExecutor(this));
-    }
-
-    private void runDetection(Bitmap bitmap) {
-        List<Detection> results = objectDetectorHelper.detectObjects(bitmap);
-
-        if (results != null) {
-            Log.d(TAG, "Detections found: " + results.size());
-            for (Detection d : results) {
-                if (!d.getCategories().isEmpty()) {
-                    String label = d.getCategories().get(0).getLabel();
-                    float score = d.getCategories().get(0).getScore();
-                    Log.d(TAG, "Detected: " + label + " (" + score + ")");
-                }
-            }
-        }
-
-        runOnUiThread(() -> {
-            if (results != null && !results.isEmpty()) {
-                overlayView.setDetections(results, bitmap.getWidth(), bitmap.getHeight());
-            } else {
-                overlayView.setDetections(null, bitmap.getWidth(), bitmap.getHeight());
             }
         });
     }
 
-    private boolean allPermissionsGranted() {
-        for (String permission : REQUIRED_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(
-                    this, permission) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return false;
+
+    /*** ---- SENSOR POLLING ---- ***/
+    private void startSensorPolling() {
+        Runnable sensorTask = new Runnable() {
+            @Override
+            public void run() {
+                // --- Update each sensor module ---
+                fetchDualSensorData(LEFT_SENSOR_URL, leftSensor, 30);   // 2 sensors on left
+                fetchSensorData(BACK_SENSOR_URL, backSensor, 30);       // 1 sensor on back
+                fetchDualSensorData(RIGHT_SENSOR_URL, rightSensor, 30); // 2 sensors on right
+
+                // Repeat every 2 seconds
+                sensorHandler.postDelayed(this, 600);
             }
-        }
-        return true;
+        };
+
+        sensorHandler.post(sensorTask);
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera();
-            } else {
-                finish();
-            }
+    /**
+     * Handles two ultrasonic readings from one ESP32 (e.g., left or right modules).
+     * Expected response format: "25,40" (both distances in cm)
+     */
+    private void fetchDualSensorData(String url, TextView targetView, int safeDistance) {
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    try {
+                        String[] parts = response.trim().split(",");
+                        int dist1 = Integer.parseInt(parts[0].trim());
+                        int dist2 = (parts.length > 1) ? Integer.parseInt(parts[1].trim()) : -1;
+
+                        // Use nearest distance as the alert distance
+                        int nearest = (dist2 > 0 && dist2 < dist1) ? dist2 : dist1;
+
+                        targetView.setText(getLabelFromTextView(targetView));
+
+                        if (nearest <= safeDistance) {
+                            targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_red_dark));
+                            playAlertSound();
+                        } else {
+                            targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
+                            stopAlertSound();
+                        }
+
+
+                    } catch (Exception e) {
+                        targetView.setText(getLabelFromTextView(targetView));
+                        targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
+                    }
+                },
+                error -> {
+                    targetView.setText(getLabelFromTextView(targetView));
+                    targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
+                });
+
+        request.setRetryPolicy(new DefaultRetryPolicy(3000, 2, 1.5f));
+        Volley.newRequestQueue(this).add(request);
+    }
+
+    /**
+     * Handles single ultrasonic reading (e.g., for back module)
+     */
+    private void fetchSensorData(String url, TextView targetView, int safeDistance) {
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    try {
+                        int distance = Integer.parseInt(response.trim());
+
+                        targetView.setText(getLabelFromTextView(targetView));
+
+                        if (distance <= safeDistance) {
+                            targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_red_dark));
+                            playAlertSound();
+                        } else {
+                            targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
+                            stopAlertSound();
+                        }
+
+
+                    } catch (NumberFormatException e) {
+                        targetView.setText(getLabelFromTextView(targetView));
+                        targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
+                    }
+                },
+                error -> {
+                    targetView.setText(getLabelFromTextView(targetView));
+                    targetView.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
+                });
+
+        request.setRetryPolicy(new DefaultRetryPolicy(3000, 2, 1.5f));
+        Volley.newRequestQueue(this).add(request);
+    }
+
+    // Helper to get label like "LeftSensor" from TextView
+    private String getLabelFromTextView(TextView tv) {
+        String idName = getResources().getResourceEntryName(tv.getId());
+        switch (idName) {
+            case "leftSensor":
+                return "Left";
+            case "backSensor":
+                return "Back";
+            case "rightSensor":
+                return "Right";
+            default:
+                return "Sensor";
         }
     }
+
+    private void playAlertSound() {
+        if (mediaPlayer != null && !isAlertPlaying) {
+            mediaPlayer.start();
+            isAlertPlaying = true;
+
+            mediaPlayer.setOnCompletionListener(mp -> isAlertPlaying = false);
+        }
+    }
+
+    private void stopAlertSound() {
+        if (mediaPlayer != null && isAlertPlaying) {
+            mediaPlayer.pause();
+            mediaPlayer.seekTo(0);
+            isAlertPlaying = false;
+        }
+    }
+
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (cameraExecutor != null) {
-            cameraExecutor.shutdown();
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayer = null;
         }
+        if (frontStream != null) frontStream.stopStream();
+        if (backStream != null) backStream.stopStream();
+        frontInferenceThread.quitSafely();
+        backInferenceThread.quitSafely();
+        sensorHandler.removeCallbacksAndMessages(null);
     }
 }

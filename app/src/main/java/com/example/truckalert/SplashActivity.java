@@ -6,12 +6,9 @@ import android.os.Handler;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-
 public class SplashActivity extends AppCompatActivity {
 
-    private static final int SPLASH_DURATION = 2000; // 2 seconds
+    private static final int SPLASH_DURATION = 1000; // 1 second
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,14 +16,8 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
 
         new Handler().postDelayed(() -> {
-            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-            if (currentUser != null) {
-                // User already logged in → go to Home
-                startActivity(new Intent(SplashActivity.this, HomeActivity.class));
-            } else {
-                // No user logged in → go to Login
-                startActivity(new Intent(SplashActivity.this, LoginActivity.class));
-            }
+            // Directly go to HomeActivity (no Firebase login check)
+            startActivity(new Intent(SplashActivity.this, HomeActivity.class));
             finish();
         }, SPLASH_DURATION);
     }

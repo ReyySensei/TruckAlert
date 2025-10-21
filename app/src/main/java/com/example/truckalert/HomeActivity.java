@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class HomeActivity extends AppCompatActivity {
 
-    Button cameraButton, profileButton, logoutButton;
+    Button cameraButton, recordingButton, logoutButton;
     TextView welcomeText;
 
     @Override
@@ -17,18 +17,13 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         cameraButton = findViewById(R.id.cameraButton);
-        profileButton = findViewById(R.id.profileButton);
-        logoutButton = findViewById(R.id.logoutButton);
+        recordingButton = findViewById(R.id.recordingButton);
 
         cameraButton.setOnClickListener(v ->
                 startActivity(new Intent(HomeActivity.this, CameraSensorsActivity.class)));
 
-        profileButton.setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, ProfileActivity.class)));
+        recordingButton.setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, RecordingActivity.class)));
 
-        logoutButton.setOnClickListener(v -> {
-            startActivity(new Intent(HomeActivity.this, LoginActivity.class));
-            finish();
-        });
     }
 }

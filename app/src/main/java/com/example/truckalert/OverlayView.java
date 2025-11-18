@@ -23,7 +23,7 @@ public class OverlayView extends View {
     private boolean isFrontCam = false;
 
     // Only these labels will be shown
-    private final List<String> relevantLabels = Arrays.asList("person", "motorcycle", "bicycle");
+    private final List<String> relevantLabels = Arrays.asList("person", "motorcycle", "bicycle", "dog", "cat");
 
     public OverlayView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -78,14 +78,6 @@ public class OverlayView extends View {
             float top = box.top * scaleY;
             float right = box.right * scaleX;
             float bottom = box.bottom * scaleY;
-
-            // Mirror the box only if front camera feed is NOT already mirrored
-            // Remove or comment this if your front camera feed is already mirrored
-            // if (isFrontCam) {
-            //     float tempLeft = left;
-            //     left = getWidth() - right;
-            //     right = getWidth() - tempLeft;
-            // }
 
             float score = rec.getConfidence();
             if (score > 0.75f) boxPaint.setColor(Color.GREEN);

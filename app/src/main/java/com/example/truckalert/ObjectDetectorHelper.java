@@ -23,8 +23,8 @@ public class ObjectDetectorHelper {
 
     public ObjectDetectorHelper(Context context) throws IOException {
         ObjectDetectorOptions options = ObjectDetectorOptions.builder()
-                .setMaxResults(5)
-                .setScoreThreshold(0.3f)
+                .setMaxResults(3)
+                .setScoreThreshold(0.4f)
                 .build();
 
         objectDetector = ObjectDetector.createFromFileAndOptions(

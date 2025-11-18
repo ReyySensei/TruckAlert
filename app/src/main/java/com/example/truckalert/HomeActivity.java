@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class HomeActivity extends AppCompatActivity {
 
-    Button cameraButton, recordingButton, logoutButton;
+    Button cameraButton, recordingButton;
     TextView welcomeText;
 
     @Override

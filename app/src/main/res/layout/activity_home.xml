@@ -51,7 +51,7 @@
         android:id="@+id/wifiReminder"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Please connect to the 'TruckAlertAP' Wi-Fi network first before proceeding to the camera and sensor alerts"
+        android:text="Please connect to the ''TruckAlertAP'' Wi-Fi network first (password: truck12345)"
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:gravity="center"

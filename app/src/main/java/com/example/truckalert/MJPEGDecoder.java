@@ -3,6 +3,7 @@ package com.example.truckalert;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.util.Log;
 import android.view.TextureView;
 
 import java.io.InputStream;
@@ -29,23 +30,29 @@ public class MJPEGDecoder extends Thread {
     public void run() {
         HttpURLConnection connection = null;
         InputStream inputStream = null;
+        int frameCount = 0; // ✅ Declare frame counter
 
         try {
+            // ⚡ Faster connection setup
             URL url = new URL(streamUrl);
             connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(5000);
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
             connection.setDoInput(true);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Connection", "Keep-Alive");
             connection.connect();
-            inputStream = connection.getInputStream();
 
+            inputStream = connection.getInputStream();
             MJPEGInputStream mjpegStream = new MJPEGInputStream(inputStream);
+
+            Log.i("MJPEGDecoder", "✅ Stream started: " + streamUrl);
 
             while (running) {
                 Bitmap frame = mjpegStream.readMJPEGFrame();
                 if (frame == null) continue;
 
-                // Draw frame on the TextureView
+                // ✅ Draw latest frame to TextureView
                 if (textureView.isAvailable()) {
                     Canvas canvas = textureView.lockCanvas();
                     if (canvas != null) {
@@ -55,25 +62,35 @@ public class MJPEGDecoder extends Thread {
                     }
                 }
 
-                // Run detection on this camera independently
-                activity.runDetection(frame, isFrontCam);
+                // ✅ Run detection every 5th frame to prevent lag
+                frameCount++;
+                if (frameCount % 5 == 0) {
+                    try {
+                        Bitmap smallFrame = Bitmap.createScaledBitmap(frame, 320, 240, false);
+                        activity.runDetection(smallFrame, isFrontCam);
+                    } catch (Exception ex) {
+                        Log.e("MJPEGDecoder", "Detection error: " + ex.getMessage());
+                    }
+                }
 
-                // Small delay to prevent overloading the CPU
-                Thread.sleep(50);
+                // ⚡ No Thread.sleep() — keeps stream as fast as possible
             }
 
         } catch (Exception e) {
+            Log.e("MJPEGDecoder", "Stream error: " + e.getMessage());
             e.printStackTrace();
         } finally {
             try {
                 if (inputStream != null) inputStream.close();
                 if (connection != null) connection.disconnect();
             } catch (Exception ignored) {}
+            Log.i("MJPEGDecoder", "❌ Stream stopped.");
         }
     }
 
     public void stopStream() {
         running = false;
         interrupt();
+        Log.i("MJPEGDecoder", "⛔ Stop signal sent to MJPEG thread.");
     }
 }

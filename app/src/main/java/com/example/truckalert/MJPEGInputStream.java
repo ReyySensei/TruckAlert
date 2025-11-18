@@ -10,7 +10,7 @@ import java.io.InputStream;
 public class MJPEGInputStream extends BufferedInputStream {
 
     private static final int HEADER_MAX_LENGTH = 100;
-    private static final int FRAME_MAX_LENGTH = 400000; // max JPEG frame size ~400KB
+    private static final int FRAME_MAX_LENGTH = 200000; // max JPEG frame size ~400KB
     private final byte[] frameBuffer = new byte[FRAME_MAX_LENGTH];
 
     public MJPEGInputStream(InputStream in) {

@@ -4,6 +4,7 @@ import com.android.volley.Request;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.android.volley.DefaultRetryPolicy;
+import android.util.Log;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -41,7 +42,7 @@ public class CameraSensorsActivity extends AppCompatActivity {
 
     private final Object detectionLock = new Object();
 
-    private final String[] relevantLabels = {"person", "motorcycle", "bicycle"};
+    private final String[] relevantLabels = {"person", "motorcycle", "bicycle", "dog", "cat"};
 
     // Sensor URLs
     private final String LEFT_SENSOR_URL = "http://192.168.4.103/left";
@@ -108,19 +109,17 @@ public class CameraSensorsActivity extends AppCompatActivity {
 
         handler.post(() -> {
             synchronized (detectionLock) {
+                long start = System.currentTimeMillis();
                 List<OverlayView.Recognition> results = objectDetectorHelper.detectObjects(bitmap);
-                List<OverlayView.Recognition> filtered = results != null ? results : new ArrayList<>();
+                long time = System.currentTimeMillis() - start;
+                Log.d("TFLite", "Detection took: " + time + "ms");
 
                 runOnUiThread(() -> {
                     OverlayView overlay = isFrontCam ? frontOverlay : backOverlay;
                     TextureView camView = isFrontCam ? frontCam : backCam;
-                    if (overlay != null && camView != null) {
-                        overlay.setDetections(
-                                filtered,
-                                bitmap.getWidth(), bitmap.getHeight(),
-                                camView.getWidth(), camView.getHeight(),
-                                isFrontCam
-                        );
+                    if (overlay != null) {
+                        overlay.setDetections(results, bitmap.getWidth(), bitmap.getHeight(),
+                                camView.getWidth(), camView.getHeight(), isFrontCam);
                     }
                 });
             }

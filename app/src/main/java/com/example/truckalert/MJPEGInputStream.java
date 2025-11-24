@@ -9,55 +9,55 @@ import java.io.InputStream;
 
 public class MJPEGInputStream extends BufferedInputStream {
 
-    private static final int HEADER_MAX_LENGTH = 100;
-    private static final int FRAME_MAX_LENGTH = 200000; // max JPEG frame size ~400KB
+    private static final int FRAME_MAX_LENGTH = 300000; // Safe for ESP32 (up to 300 KB JPEG)
     private final byte[] frameBuffer = new byte[FRAME_MAX_LENGTH];
 
     public MJPEGInputStream(InputStream in) {
         super(in, FRAME_MAX_LENGTH);
     }
 
+    // Combined stable SOI/EOI scanning (fixed version)
     public Bitmap readMJPEGFrame() throws IOException {
         int len = 0;
-        boolean startFound = false;
-        boolean endFound = false;
 
-        int b;
-        while ((b = read()) != -1) {
-            if (!startFound) {
-                if (b == 0xFF) {
-                    int next = read();
-                    if (next == 0xD8) { // SOI marker
-                        frameBuffer[len++] = (byte) b;
-                        frameBuffer[len++] = (byte) next;
-                        startFound = true;
-                    }
-                }
-            } else {
-                frameBuffer[len++] = (byte) b;
+        // ---- FIND SOI (Start Of Image) ----
+        int prev = -1;
+        while (true) {
+            int curr = read();
+            if (curr == -1) return null;
 
-                int next = read();
-                if (next == -1) break;
-                frameBuffer[len++] = (byte) next;
-
-                if (b == 0xFF && next == 0xD9) { // EOI marker
-                    endFound = true;
-                    break;
-                }
-
-                if (len >= FRAME_MAX_LENGTH - 2) {
-                    // frame too large, discard
-                    return null;
-                }
-
-                b = next;
+            if (prev == 0xFF && curr == 0xD8) {
+                // SOI found → write it
+                frameBuffer[0] = (byte) 0xFF;
+                frameBuffer[1] = (byte) 0xD8;
+                len = 2;
+                break;
             }
+            prev = curr;
         }
 
-        if (startFound && endFound) {
-            return BitmapFactory.decodeByteArray(frameBuffer, 0, len);
+        // ---- READ UNTIL EOI (End Of Image) ----
+        prev = -1;
+        while (true) {
+            int curr = read();
+            if (curr == -1) return null;
+
+            frameBuffer[len++] = (byte) curr;
+
+            if (len >= FRAME_MAX_LENGTH - 1) {
+                // Too big → discard frame
+                return null;
+            }
+
+            if (prev == 0xFF && curr == 0xD9) {
+                // FULL JPEG frame detected
+                break;
+            }
+
+            prev = curr;
         }
 
-        return null;
+        // ---- Decode JPEG to Bitmap ----
+        return BitmapFactory.decodeByteArray(frameBuffer, 0, len);
     }
 }

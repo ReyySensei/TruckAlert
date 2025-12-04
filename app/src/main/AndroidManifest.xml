@@ -24,12 +24,16 @@
         <!-- Main App Screen -->
         <activity
             android:name=".HomeActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:screenOrientation="fullSensor"
+            />
 
         <!-- Splash Screen (entry point) -->
         <activity
             android:name=".SplashActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="fullSensor"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -39,12 +43,28 @@
         <!-- Camera & Sensors Screen -->
         <activity
             android:name=".CameraSensorsActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:screenOrientation="fullSensor"
+            />
 
         <!-- Profile Screen -->
         <activity
             android:name=".RecordingActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:screenOrientation="fullSensor"
+            />
+
+        <!-- Fullscreen Camera Screen -->
+        <activity
+            android:name=".FullScreenCameraActivity"
+            android:screenOrientation="fullSensor"
+            android:exported="false" />
+
+        <!-- Recording Player Screen -->
+        <activity
+            android:name=".RecordingPlayerActivity"
+            android:exported="false"
+            android:screenOrientation="fullSensor" />
 
     </application>
 

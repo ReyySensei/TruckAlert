@@ -18,6 +18,7 @@ public class MJPEGDecoder extends Thread {
     private final TextureView textureView;
     private final String cameraId;                    // left, right, front, back
     private final CameraSensorsActivity activity;
+    private OverlayView overlayView;
 
     private volatile boolean running = true;
 
@@ -110,4 +111,9 @@ public class MJPEGDecoder extends Thread {
         running = false;
         interrupt();
     }
+
+    public void setOverlayView(OverlayView overlay) {
+        this.overlayView = overlay;
+    }
+
 }

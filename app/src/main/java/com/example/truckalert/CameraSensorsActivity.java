@@ -15,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import android.content.Intent;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -23,14 +25,12 @@ import java.util.List;
 
 /**
  * CameraSensorsActivity — updated to work with the new, rewritten MJPEGDecoder (cameraId-based).
- *
  * Key improvements:
  * - Uses MJPEGDecoder(url, textureView, cameraId, activity) for all 4 cameras
  * - Starts streams in onResume() and stops in onPause() to manage resources properly
  * - Per-camera inference runs on dedicated HandlerThreads
  * - Detection is still throttled (every 5th frame inside decoder) — activity receives scaled bitmaps
  * - Robust cleanup in onDestroy()
- *
  * NOTE:
  * - Update the LEFT/RIGHT URL placeholders below to your actual ESP32 endpoints.
  * - Make sure R.raw.beep exists or replace it with your sound resource.
@@ -39,7 +39,7 @@ import java.util.List;
 public class CameraSensorsActivity extends AppCompatActivity {
 
     private static final String TAG = "CameraSensorsActivity";
-
+    private RequestQueue requestQueue;
     // TextureViews (camera previews)
     public TextureView leftCam, rightCam, frontCam, backCam;
 
@@ -75,16 +75,47 @@ public class CameraSensorsActivity extends AppCompatActivity {
     private final String BACK_SENSOR_URL = "http://192.168.4.104/back";
     private final String RIGHT_SENSOR_URL = "http://192.168.4.105/right";
 
-    // Camera stream URLs — TODO: replace with your actual left/right streams
-    private final String LEFT_CAM_URL  = "http://192.168.4.106:81/stream"; // <-- update
-    private final String RIGHT_CAM_URL = "http://192.168.4.107:81/stream"; // <-- update
-    private final String FRONT_CAM_URL = "http://192.168.4.101:81/stream";
-    private final String BACK_CAM_URL  = "http://192.168.4.102:81/stream";
+    // =======================
+// CAMERA HOSTS (API – port 80)
+// =======================
+    private final String LEFT_CAM_HOST  = "http://192.168.4.106";
+    private final String RIGHT_CAM_HOST = "http://192.168.4.107";
+    private final String FRONT_CAM_HOST = "http://192.168.4.101";
+    private final String BACK_CAM_HOST  = "http://192.168.4.102";
+
+    // =======================
+// CAMERA STREAMS (MJPEG – port 81)
+// =======================
+    private final String LEFT_CAM_URL  = LEFT_CAM_HOST  + ":81/stream";
+    private final String RIGHT_CAM_URL = RIGHT_CAM_HOST + ":81/stream";
+    private final String FRONT_CAM_URL = FRONT_CAM_HOST + ":81/stream";
+    private final String BACK_CAM_URL  = BACK_CAM_HOST  + ":81/stream";
+
+
+    // Recording flags per camera
+    private boolean isRecordingBack = false;
+    private long backLastSeen = 0;
+
+    private boolean isRecordingFront = false;
+    private long frontLastSeen = 0;
+
+    private boolean isRecordingLeft = false;
+    private long leftLastSeen = 0;
+
+    private boolean isRecordingRight = false;
+    private long rightLastSeen = 0;
+
+    // Detection timeout (ms) before stopping recording
+    private static final long DETECTION_TIMEOUT = 2500;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera_sensors);
+
+        // Initialize a single Volley RequestQueue for this activity
+        requestQueue = Volley.newRequestQueue(getApplicationContext());
 
         // Back button
         Button backButton = findViewById(R.id.backButton);
@@ -95,6 +126,12 @@ public class CameraSensorsActivity extends AppCompatActivity {
         rightCam = findViewById(R.id.rightCam);
         frontCam = findViewById(R.id.frontCam);
         backCam = findViewById(R.id.backCam);
+
+        // --- Full-screen tap listeners ---
+        leftCam.setOnClickListener(v -> openFullScreen("left"));
+        rightCam.setOnClickListener(v -> openFullScreen("right"));
+        frontCam.setOnClickListener(v -> openFullScreen("front"));
+        backCam.setOnClickListener(v -> openFullScreen("back"));
 
         // Find overlays
         leftOverlay = findViewById(R.id.leftOverlay);
@@ -153,6 +190,28 @@ public class CameraSensorsActivity extends AppCompatActivity {
         super.onPause();
         stopMJPEGStreams();
         stopSensorPolling();
+    }
+
+    private void openFullScreen(String cameraId) {
+        Intent intent = new Intent(this, FullScreenCameraActivity.class);
+        intent.putExtra("cameraId", cameraId);
+        startActivity(intent);
+    }
+
+    private void startRecording(String camHost) {
+        String url = camHost + "/start_record";
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                response -> Log.i(TAG, "Recording started: " + camHost),
+                error -> Log.e(TAG, "Failed to start recording: " + camHost));
+        requestQueue.add(request);
+    }
+
+    private void stopRecording(String camHost) {
+        String url = camHost + "/stop_record";
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                response -> Log.i(TAG, "Recording stopped: " + camHost),
+                error -> Log.e(TAG, "Failed to stop recording: " + camHost));
+        requestQueue.add(request);
     }
 
     /**
@@ -234,31 +293,106 @@ public class CameraSensorsActivity extends AppCompatActivity {
      */
     private void runDetectionOnHandler(Bitmap bitmap, Handler handler,
                                        OverlayView overlay, TextureView camView, String cameraId) {
+
         if (bitmap == null || handler == null || objectDetectorHelper == null) return;
 
         handler.post(() -> {
             synchronized (detectionLock) {
+
                 try {
                     long start = System.currentTimeMillis();
                     List<OverlayView.Recognition> results = objectDetectorHelper.detectObjects(bitmap);
                     long time = System.currentTimeMillis() - start;
                     Log.d(TAG, cameraId + " detection took: " + time + "ms");
 
-                    // Update overlay on UI thread
+                    // ---- YOLO RECORDING TRIGGER LOGIC ----
+                    boolean detected = (results != null && !results.isEmpty());
+                    long now = System.currentTimeMillis();
+
+                    switch (cameraId) {
+
+                        case "back":
+                            if (detected) {
+                                backLastSeen = now;
+                                if (!isRecordingBack) {
+                                    isRecordingBack = true;
+                                    startRecording(BACK_CAM_HOST);
+                                    Log.i(TAG, "BACK: Recording started");
+                                }
+                            } else if (isRecordingBack && now - backLastSeen > DETECTION_TIMEOUT) {
+                                isRecordingBack = false;
+                                stopRecording(BACK_CAM_HOST);
+                                Log.i(TAG, "BACK: Recording stopped");
+                            }
+                            break;
+
+                        case "front":
+                            if (detected) {
+                                frontLastSeen = now;
+                                if (!isRecordingFront) {
+                                    isRecordingFront = true;
+                                    startRecording(FRONT_CAM_HOST);
+                                    Log.i(TAG, "FRONT: Recording started");
+                                }
+                            } else if (isRecordingFront && now - frontLastSeen > DETECTION_TIMEOUT) {
+                                isRecordingFront = false;
+                                stopRecording(FRONT_CAM_HOST);
+                                Log.i(TAG, "FRONT: Recording stopped");
+                            }
+                            break;
+
+                        case "left":
+                            if (detected) {
+                                leftLastSeen = now;
+                                if (!isRecordingLeft) {
+                                    isRecordingLeft = true;
+                                    startRecording(LEFT_CAM_HOST);
+                                    Log.i(TAG, "LEFT: Recording started");
+                                }
+                            } else if (isRecordingLeft && now - leftLastSeen > DETECTION_TIMEOUT) {
+                                isRecordingLeft = false;
+                                stopRecording(LEFT_CAM_HOST);
+                                Log.i(TAG, "LEFT: Recording stopped");
+                            }
+                            break;
+
+                        case "right":
+                            if (detected) {
+                                rightLastSeen = now;
+                                if (!isRecordingRight) {
+                                    isRecordingRight = true;
+                                    startRecording(RIGHT_CAM_HOST);
+                                    Log.i(TAG, "RIGHT: Recording started");
+                                }
+                            } else if (isRecordingRight && now - rightLastSeen > DETECTION_TIMEOUT) {
+                                isRecordingRight = false;
+                                stopRecording(RIGHT_CAM_HOST);
+                                Log.i(TAG, "RIGHT: Recording stopped");
+                            }
+                            break;
+                    }
+                    // ---- END RECORDING TRIGGER LOGIC ----
+
+
+                    // ---- DRAW OVERLAY ON UI THREAD ----
                     runOnUiThread(() -> {
                         if (overlay != null && camView != null) {
-                            overlay.setDetections(results,
+                            overlay.setDetections(
+                                    results,
                                     bitmap.getWidth(), bitmap.getHeight(),
                                     camView.getWidth(), camView.getHeight(),
-                                    cameraId.equals("front") || cameraId.equals("left"));
+                                    cameraId.equals("front") || cameraId.equals("left")
+                            );
                         }
                     });
+
                 } catch (Exception e) {
                     Log.e(TAG, "Detection error on " + cameraId, e);
                 }
             }
         });
     }
+
 
     /*** ---- SENSOR POLLING ----***/
     private void startSensorPolling() {
@@ -288,7 +422,7 @@ public class CameraSensorsActivity extends AppCompatActivity {
                         String[] parts = response.trim().split(",");
                         int dist1 = Integer.parseInt(parts[0].trim());
                         int dist2 = (parts.length > 1) ? Integer.parseInt(parts[1].trim()) : -1;
-                        int nearest = (dist2 > 0 && dist2 < dist1) ? dist2 : dist1;
+                        int nearest = (dist2     > 0 && dist2 < dist1) ? dist2 : dist1;
 
                         targetView.setText(getLabelFromTextView(targetView));
 
@@ -310,7 +444,7 @@ public class CameraSensorsActivity extends AppCompatActivity {
                 });
 
         request.setRetryPolicy(new DefaultRetryPolicy(3000, 2, 1.5f));
-        Volley.newRequestQueue(this).add(request);
+        requestQueue.add(request);
     }
 
     private void fetchSensorData(String url, TextView targetView, int safeDistance, MediaPlayer alertPlayer) {
@@ -338,12 +472,13 @@ public class CameraSensorsActivity extends AppCompatActivity {
                 });
 
         request.setRetryPolicy(new DefaultRetryPolicy(3000, 2, 1.5f));
-        Volley.newRequestQueue(this).add(request);
+        requestQueue.add(request);
     }
 
     private void playIndependentAlert(MediaPlayer player) {
-        if (player != null && !player.isPlaying()) {
-            player.start();
+        if (player != null) {
+            player.setLooping(true);
+            if (!player.isPlaying()) player.start();
         }
     }
 
@@ -387,5 +522,11 @@ public class CameraSensorsActivity extends AppCompatActivity {
         if (rightInferenceThread != null) { rightInferenceThread.quitSafely(); rightInferenceThread = null; }
 
         sensorHandler.removeCallbacksAndMessages(null);
+
+        // ✅ Optional: stop / clear Volley queue
+        if (requestQueue != null) {
+            requestQueue.stop();
+            requestQueue = null;
+        }
     }
 }

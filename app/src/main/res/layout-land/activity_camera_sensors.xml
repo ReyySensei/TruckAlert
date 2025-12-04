@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:fitsSystemWindows="true"
+    android:keepScreenOn="true"
+    android:paddingTop="32dp"
+    android:padding="12dp">
+
+    <!-- HEADER ROW -->
+    <Button
+        android:id="@+id/backButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Back"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@android:color/black"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/cameraTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Camera"
+        android:textSize="22sp"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:layout_marginStart="16dp"
+        app:layout_constraintStart_toEndOf="@id/backButton"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- MAIN CAMERA GRID (LEFT SIDE) -->
+
+    <!-- SENSOR PANEL (RIGHT SIDE) -->
+    <androidx.gridlayout.widget.GridLayout
+        android:id="@+id/cameraGrid"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:columnCount="2"
+        android:rowCount="2"
+        android:useDefaultMargins="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/sensorPanel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/backButton"
+        app:layout_constraintVertical_bias="0.0">
+
+        <!-- CAMERA TILE TEMPLATE -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill">
+
+            <TextureView
+                android:id="@+id/leftCam"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <com.example.truckalert.OverlayView
+                android:id="@+id/leftOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill">
+
+            <TextureView
+                android:id="@+id/rightCam"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <com.example.truckalert.OverlayView
+                android:id="@+id/rightOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill">
+
+            <TextureView
+                android:id="@+id/frontCam"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <com.example.truckalert.OverlayView
+                android:id="@+id/frontOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill">
+
+            <TextureView
+                android:id="@+id/backCam"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <com.example.truckalert.OverlayView
+                android:id="@+id/backOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+
+    </androidx.gridlayout.widget.GridLayout>
+
+    <LinearLayout
+        android:id="@+id/sensorPanel"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:gravity="top|center_horizontal"
+        android:paddingStart="16dp"
+        app:layout_constraintTop_toBottomOf="@id/backButton"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/cameraGrid"
+        app:layout_constraintWidth_percent="0.30">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sensors"
+            android:textColor="@android:color/white"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="16dp" />
+
+        <TextView
+            android:id="@+id/leftSensor"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:text="Left"
+            android:gravity="center"
+            android:padding="12dp"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@android:color/holo_green_dark" />
+
+        <TextView
+            android:id="@+id/rightSensor"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Right"
+            android:gravity="center"
+            android:padding="12dp"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@android:color/holo_green_dark" />
+
+        <TextView
+            android:id="@+id/backSensor"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Back"
+            android:gravity="center"
+            android:padding="12dp"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@android:color/holo_green_dark" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

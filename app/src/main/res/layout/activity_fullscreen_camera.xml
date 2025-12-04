@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <TextureView
+        android:id="@+id/fullScreenCam"
+        android:layout_width="match_parent"
+        android:layout_height="313dp"
+        android:layout_gravity="center"/>
+
+    <com.example.truckalert.OverlayView
+        android:id="@+id/fullScreenOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="315dp"
+        android:layout_gravity="center"/>
+
+    <ImageButton
+        android:id="@+id/exitFull"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="24dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:tint="@android:color/white" />
+</FrameLayout>

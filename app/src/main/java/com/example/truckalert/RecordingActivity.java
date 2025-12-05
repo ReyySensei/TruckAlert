@@ -1,6 +1,6 @@
 package com.example.truckalert;
 
-import android.content.Intent;          // ⭐ NEW ⭐
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -69,13 +69,17 @@ public class RecordingActivity extends AppCompatActivity {
                 return;
             }
 
-            // URL: http://192.168.x.x/sdcard/record_xxx.mjpeg
-            String fileUrl = camIp + "/sdcard/" + fileName;
-
             Intent intent = new Intent(RecordingActivity.this, RecordingPlayerActivity.class);
 
-            // Correct URL: http://<IP>/<filename>
-            intent.putExtra("url", camIp + "/" + fileName);
+            // ✅ FIXED — correct playback URL
+            // ESP32 returns names like "/record_xxx.mjpeg"
+            // Correct final URL: http://IP/record_xxx.mjpeg
+            if (fileName.startsWith("/")) {
+                intent.putExtra("url", camIp + fileName);
+            } else {
+                intent.putExtra("url", camIp + "/" + fileName);
+            }
+
             startActivity(intent);
         });
 

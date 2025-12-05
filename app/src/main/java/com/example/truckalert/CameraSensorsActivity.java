@@ -76,16 +76,16 @@ public class CameraSensorsActivity extends AppCompatActivity {
     private final String RIGHT_SENSOR_URL = "http://192.168.4.105/right";
 
     // =======================
-// CAMERA HOSTS (API – port 80)
-// =======================
+    // CAMERA HOSTS (API – port 80)
+    // =======================
     private final String LEFT_CAM_HOST  = "http://192.168.4.106";
     private final String RIGHT_CAM_HOST = "http://192.168.4.107";
     private final String FRONT_CAM_HOST = "http://192.168.4.101";
     private final String BACK_CAM_HOST  = "http://192.168.4.102";
 
     // =======================
-// CAMERA STREAMS (MJPEG – port 81)
-// =======================
+    // CAMERA STREAMS (MJPEG – port 81)
+    // =======================
     private final String LEFT_CAM_URL  = LEFT_CAM_HOST  + ":81/stream";
     private final String RIGHT_CAM_URL = RIGHT_CAM_HOST + ":81/stream";
     private final String FRONT_CAM_URL = FRONT_CAM_HOST + ":81/stream";
@@ -190,6 +190,11 @@ public class CameraSensorsActivity extends AppCompatActivity {
         super.onPause();
         stopMJPEGStreams();
         stopSensorPolling();
+
+        // 🔇 Make sure titit.mp3 from ObjectDetectorHelper stops when leaving screen
+        if (objectDetectorHelper != null) {
+            objectDetectorHelper.stopAlertSound();
+        }
     }
 
     private void openFullScreen(String cameraId) {
@@ -514,6 +519,12 @@ public class CameraSensorsActivity extends AppCompatActivity {
         if (leftAlertPlayer != null)  { leftAlertPlayer.release(); leftAlertPlayer = null; }
         if (rightAlertPlayer != null) { rightAlertPlayer.release(); rightAlertPlayer = null; }
         if (backAlertPlayer != null)  { backAlertPlayer.release(); backAlertPlayer = null; }
+
+        // 🔇 Release object detector + its titit.mp3 player
+        if (objectDetectorHelper != null) {
+            objectDetectorHelper.release();
+            objectDetectorHelper = null;
+        }
 
         // Quit inference threads
         if (frontInferenceThread != null) { frontInferenceThread.quitSafely(); frontInferenceThread = null; }

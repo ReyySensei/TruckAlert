@@ -23,7 +23,7 @@ public class OverlayView extends View {
     private boolean isFrontCam = false;
 
     // Only these labels will be shown
-    private final List<String> relevantLabels = Arrays.asList("person", "motorcycle", "bicycle", "dog", "cat");
+    private final List<String> relevantLabels = Arrays.asList("person", "car", "truck", "motorcycle", "bicycle", "dog", "cat");
 
     public OverlayView(Context context, AttributeSet attrs) {
         super(context, attrs);

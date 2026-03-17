@@ -24,7 +24,7 @@ public class ObjectDetectorHelper {
     private boolean isAlerting = false;
 
     private final String[] relevantLabels = {
-            "person", "car", "truck", "bicycle", "motorcycle", "cat", "dog"
+            "person", "car", "truck", "bicycle", "motorcycle", "cat", "dog", "cow", "horse"
     };
 
     public ObjectDetectorHelper(Context context) throws IOException {

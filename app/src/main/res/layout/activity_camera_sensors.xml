@@ -27,11 +27,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="12dp"
-
         app:layout_constraintTop_toBottomOf="@id/backButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-
         app:layout_constraintWidth_percent="0.80"
         app:layout_constraintHeight_percent="0.23"/>
 
@@ -44,6 +42,22 @@
         app:layout_constraintStart_toStartOf="@id/frontCam"
         app:layout_constraintEnd_toEndOf="@id/frontCam"/>
 
+    <TextView
+        android:id="@+id/frontCamLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="6dp"
+        android:text="FrontCam"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:background="#66000000"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="2dp"
+        app:layout_constraintTop_toTopOf="@id/frontCam"
+        app:layout_constraintStart_toStartOf="@id/frontCam"/>
+
 
     <!-- ================================================= -->
     <!-- LEFT CAMERA (18% HEIGHT)                         -->
@@ -53,11 +67,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="12dp"
-
         app:layout_constraintTop_toBottomOf="@id/frontCam"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/rightCam"
-
         app:layout_constraintWidth_percent="0.48"
         app:layout_constraintHeight_percent="0.18"/>
 
@@ -70,6 +82,22 @@
         app:layout_constraintStart_toStartOf="@id/leftCam"
         app:layout_constraintEnd_toEndOf="@id/leftCam"/>
 
+    <TextView
+        android:id="@+id/leftCamLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="6dp"
+        android:text="LeftCam"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:background="#66000000"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="2dp"
+        app:layout_constraintTop_toTopOf="@id/leftCam"
+        app:layout_constraintStart_toStartOf="@id/leftCam"/>
+
 
     <!-- ================================================= -->
     <!-- RIGHT CAMERA (18% HEIGHT)                        -->
@@ -79,11 +107,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="12dp"
-
         app:layout_constraintTop_toBottomOf="@id/frontCam"
         app:layout_constraintStart_toEndOf="@id/leftCam"
         app:layout_constraintEnd_toEndOf="parent"
-
         app:layout_constraintWidth_percent="0.48"
         app:layout_constraintHeight_percent="0.18"/>
 
@@ -96,6 +122,22 @@
         app:layout_constraintStart_toStartOf="@id/rightCam"
         app:layout_constraintEnd_toEndOf="@id/rightCam"/>
 
+    <TextView
+        android:id="@+id/rightCamLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="6dp"
+        android:text="RightCam"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:background="#66000000"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="2dp"
+        app:layout_constraintTop_toTopOf="@id/rightCam"
+        app:layout_constraintStart_toStartOf="@id/rightCam"/>
+
 
     <!-- ================================================= -->
     <!-- BACK CAMERA (23% HEIGHT, CENTERED)               -->
@@ -105,11 +147,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="12dp"
-
         app:layout_constraintTop_toBottomOf="@id/rightCam"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-
         app:layout_constraintWidth_percent="0.80"
         app:layout_constraintHeight_percent="0.23"/>
 
@@ -121,6 +161,22 @@
         app:layout_constraintBottom_toBottomOf="@id/backCam"
         app:layout_constraintStart_toStartOf="@id/backCam"
         app:layout_constraintEnd_toEndOf="@id/backCam"/>
+
+    <TextView
+        android:id="@+id/backCamLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="6dp"
+        android:text="BackCam"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:background="#66000000"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="2dp"
+        app:layout_constraintTop_toTopOf="@id/backCam"
+        app:layout_constraintStart_toStartOf="@id/backCam"/>
 
 
     <!-- ================================================= -->
@@ -138,7 +194,6 @@
         app:layout_constraintTop_toBottomOf="@id/backCam"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
-
 
     <!-- SENSOR GRID (FIT CONTENT) -->
     <GridLayout
@@ -164,7 +219,7 @@
             android:textColor="@android:color/white"
             android:textSize="18sp"/>
 
-        <!-- SPACER (ADJUST WIDTH TO CONTROL SPACE) -->
+        <!-- SPACER -->
         <View
             android:layout_width="40dp"
             android:layout_height="1dp"/>
@@ -181,8 +236,6 @@
             android:textColor="@android:color/white"
             android:textSize="18sp"/>
     </GridLayout>
-
-
 
     <!-- BACK SENSOR -->
     <TextView
